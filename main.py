@@ -1,10 +1,9 @@
-import math
 import time
 from multiprocessing.pool import Pool
-import itertools
+from multiprocessing.process import Process
 import matplotlib.pyplot as plt
 import os
-from PyPDF2 import PdfReader, PdfFileWriter, PdfWriter, PageRange, PdfMerger
+from PyPDF2 import PdfReader
 import re
 import numpy as np
 
@@ -55,15 +54,33 @@ def splitString(string, n):
     return parts
 
 
+def bruteForce(text, pattern):
+    # initialize the list of indexes
+    indexes = []
+    # loop through the string
+    for i in range(len(text)):
+        # loop through the pattern
+        for j in range(len(pattern)):
+            # if the characters do not match
+            if text[i + j] != pattern[j]:
+                # break out of the inner loop
+                break
+            # if the characters match and we have reached the end of the pattern
+            if j == len(pattern) - 1:
+                # append the index to the list of indexes
+                indexes.append(i)
+    # return the list of indexes
+    return indexes
+
+
 def findStringInPart(test_sub):
-    pattern = ''
-    # string = test_sub[0]
+    test_sub_text = test_sub[0]
+    pattern = 'Python'
     t1 = time.time()
-    # occurences = re.finditer(pattern, string)
-    res = [i.start() for i in re.finditer(pattern, test_sub[0])]
+    bruteForce(test_sub_text, pattern)
     t2 = time.time()
-    # outputMatchingIndexes(res)
     return (t2-t1)
+
 
 def drawPlots(no_processes, times, iloscStron):
     fig = plt.figure(figsize=(15, 10))
@@ -73,11 +90,13 @@ def drawPlots(no_processes, times, iloscStron):
     plt.title("Konwersja PDF o dlugosci " + str(iloscStron) +
               " stron do txt następnie wyszukiwanie wzorca w tekście \nZależnie od ilosci procesorów [ 1 - " + str(os.cpu_count()) + "]")
     plt.savefig("wzorzec_w_tekscie_.png")
-    
-    plt.bar_label(plt.bar(no_processes, times, color="yellowgreen", width=0.3), padding=3)
-    
+
+    plt.bar_label(plt.bar(no_processes, times,
+                  color="yellowgreen", width=0.3), padding=3)
+
     plt.show()
     print("Wykres został zapisany do pliku wzorzec_w_tekscie_.png")
+
 
 def main():
     # odczyt PDF z PyPDF2
@@ -86,7 +105,7 @@ def main():
     no_processes = []  # tablica z liczba procesów
     aviableCPUs = 6  # liczba dostępnych procesorów
     # czas otwarcia pliku jest na tyle mały że nie będę go brał pod uwagę
-    pdffileobj = open('Sample/.pdf', 'rb')
+    pdffileobj = open('Sample/sample2.pdf', 'rb')
     reader = PdfReader(pdffileobj)  # inicjalizujemy obiekt reader
     iloscStron = len(reader.pages)
 
@@ -100,43 +119,45 @@ def main():
         page = reader.pages[page_number]
         page_content += page.extract_text()
     print("Czas przerabiania: ", time.time()-t1)
+    print('\n')
+    print('\n')
 
     for CORES in range(aviableCPUs, 0, -1):
         no_processes.append(CORES)
         sst1 = time.time()
         listOfStrings = splitString(page_content, CORES)
         sst2 = time.time()
-        print("Czas dzielenia: ", sst2 - sst1)
-        t1 = time.time()
         with Pool(processes=CORES) as pool:
-            # issues tasks to process pool
+            t1 = time.time()
             results = pool.map_async(findStringInPart, listOfStrings)
+
+            #print("Czasy szukania: ", results)
             for result in results.get():
                 print(f'Got result: {result}', flush=True)
-        t2= time.time()
+            t2 = time.time()
         print("Liczba procesów:", CORES, "\nCzas:", t2 - t1, "\n")
         times.append(t2 - t1)
 
+    print("Tablica liczba procesów: ", no_processes)
     drawPlots(no_processes, times, iloscStron)
 
-  
-        # #Przygotowujemy tablice przedzialow
-        #         iloscProcesorow = CORES
-        #         przedzial = iloscStron // iloscProcesorow
-        #         listOfIntervals = []
-        #         start = 0
-        #         for i in range(iloscProcesorow):
-        #             if i == iloscProcesorow -1:
-        #                 end = iloscStron
-        #             else:
-        #                 end = start + przedzial
-        #             listOfIntervals.append((start, end - 1))
-        #             start = end
-        #         print("Lista przedziałów: ", listOfIntervals)
+    # #Przygotowujemy tablice przedzialow
+    #         iloscProcesorow = CORES
+    #         przedzial = iloscStron // iloscProcesorow
+    #         listOfIntervals = []
+    #         start = 0
+    #         for i in range(iloscProcesorow):
+    #             if i == iloscProcesorow -1:
+    #                 end = iloscStron
+    #             else:
+    #                 end = start + przedzial
+    #             listOfIntervals.append((start, end - 1))
+    #             start = end
+    #         print("Lista przedziałów: ", listOfIntervals)
 
-        #     print(f"Wczytanie pliku trwało: {finish_time1 - start_time1} sekund")
-        #     print(f"Konwersja na txt: {finish_time2 - start_time2} sekund")
-        #     print(f"Wyszukiwanie trwało: {finish_time3 - start_time3} sekund")
+    #     print(f"Wczytanie pliku trwało: {finish_time1 - start_time1} sekund")
+    #     print(f"Konwersja na txt: {finish_time2 - start_time2} sekund")
+    #     print(f"Wyszukiwanie trwało: {finish_time3 - start_time3} sekund")
 
 
 if __name__ == "__main__":
