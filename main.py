@@ -1,11 +1,8 @@
 import time
-from multiprocessing.pool import Pool
-from multiprocessing.process import Process
+import multiprocessing
 import matplotlib.pyplot as plt
 import os
 from PyPDF2 import PdfReader
-import re
-import numpy as np
 
 
 def outputMatchingIndexes(res):
@@ -75,7 +72,7 @@ def bruteForce(text, pattern):
 
 def findStringInPart(test_sub):
     test_sub_text = test_sub[0]
-    pattern = 'Python'
+    pattern = 'Jezus'
     t1 = time.time()
     bruteForce(test_sub_text, pattern)
     t2 = time.time()
@@ -105,7 +102,7 @@ def main():
     no_processes = []  # tablica z liczba procesów
     aviableCPUs = 6  # liczba dostępnych procesorów
     # czas otwarcia pliku jest na tyle mały że nie będę go brał pod uwagę
-    pdffileobj = open('Sample/sample2.pdf', 'rb')
+    pdffileobj = open('Sample/bibliax2.pdf', 'rb')
     reader = PdfReader(pdffileobj)  # inicjalizujemy obiekt reader
     iloscStron = len(reader.pages)
 
@@ -127,37 +124,21 @@ def main():
         sst1 = time.time()
         listOfStrings = splitString(page_content, CORES)
         sst2 = time.time()
-        with Pool(processes=CORES) as pool:
-            t1 = time.time()
-            results = pool.map_async(findStringInPart, listOfStrings)
+        print("Czas dzielenie stringa", sst2 - sst1)
+        t1 = time.time()
 
-            #print("Czasy szukania: ", results)
-            for result in results.get():
-                print(f'Got result: {result}', flush=True)
-            t2 = time.time()
+        for i in range(CORES-1, -1, -1):
+            p = [multiprocessing.Process(
+                target=findStringInPart, args=(listOfStrings[i],))]
+        for i in p:
+            i.start()
+        for i in p:
+            i.join()
+        t2 = time.time()
         print("Liczba procesów:", CORES, "\nCzas:", t2 - t1, "\n")
         times.append(t2 - t1)
 
-    print("Tablica liczba procesów: ", no_processes)
     drawPlots(no_processes, times, iloscStron)
-
-    # #Przygotowujemy tablice przedzialow
-    #         iloscProcesorow = CORES
-    #         przedzial = iloscStron // iloscProcesorow
-    #         listOfIntervals = []
-    #         start = 0
-    #         for i in range(iloscProcesorow):
-    #             if i == iloscProcesorow -1:
-    #                 end = iloscStron
-    #             else:
-    #                 end = start + przedzial
-    #             listOfIntervals.append((start, end - 1))
-    #             start = end
-    #         print("Lista przedziałów: ", listOfIntervals)
-
-    #     print(f"Wczytanie pliku trwało: {finish_time1 - start_time1} sekund")
-    #     print(f"Konwersja na txt: {finish_time2 - start_time2} sekund")
-    #     print(f"Wyszukiwanie trwało: {finish_time3 - start_time3} sekund")
 
 
 if __name__ == "__main__":
