@@ -52,21 +52,13 @@ def splitString(string, n):
 
 
 def bruteForce(text, pattern):
-    # initialize the list of indexes
     indexes = []
-    # loop through the string
     for i in range(len(text)):
-        # loop through the pattern
         for j in range(len(pattern)):
-            # if the characters do not match
             if text[i + j] != pattern[j]:
-                # break out of the inner loop
                 break
-            # if the characters match and we have reached the end of the pattern
             if j == len(pattern) - 1:
-                # append the index to the list of indexes
                 indexes.append(i)
-    # return the list of indexes
     return indexes
 
 
